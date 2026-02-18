@@ -1,18 +1,18 @@
 #include <iostream>
 #include <cmath>
 #include <random>
-#include <Eigen/Dense>
+#include "Eigen/Dense"
+// #include <omp.h>
 
 float contourFunction(float x, float y) {
-    float contor = pow(x - 0.4,2) + pow(y - 0.6, 2) -0.4;
-    return contor;
+    float contour = pow(x - 0.4,2) + pow(y - 0.6, 2) -0.4;
+    return contour;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
 
     //std::cout << contourFunction(4.7, 3.2) << std::endl;
     std::cout << "Before calculations \n" << std::endl;
-
 
     const int numParticles = 10;
 
@@ -112,6 +112,7 @@ int main() {
 
     for (int i = 0; i < 100000; i++) {
         //Updates particle velocity and position; tracks best positions
+        // #pragma omp parallel for
         for (int j = 0; j < numParticles; j++) {
             //iterating through particles
             for (int k = 0; k < 2; k++) {
@@ -144,3 +145,15 @@ int main() {
 
     return 0;
 }
+
+
+// #pragma omp parallel for schedule(static) threads(THREADS)
+// if (environment variable OMP_NUM_THREADS exists in the underlying shell process) {
+//     use threads = OMP_NUM_THREADS
+// } else {
+//     use threads = 1
+// }
+// for (int i = 0; i < N; i++) {
+//     /* a loop that doesn't take very long */
+//
+// }
