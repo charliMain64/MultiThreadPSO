@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <cmath>
 #include <random>
 #include "Eigen/Dense"
@@ -13,7 +14,9 @@ int main(int argc, char *argv[]) {
 
     //std::cout << contourFunction(4.7, 3.2) << std::endl;
     std::cout << "Before calculations \n" << std::endl;
-
+    std::ofstream clearCordFile("particleCords.txt", std::ios::out | std::ios::trunc);
+    clearCordFile.close();
+    std::ofstream particleCordFile("particleCords.txt");
     const int numParticles = 10;
 
     // int xBounds[2];
@@ -141,7 +144,9 @@ int main(int argc, char *argv[]) {
         yVal = particle(i,1);
         zVal = particle(i,2);
         std::cout << "final: " << xVal << " | " << yVal << " | " << zVal << "\n" << std::endl;
+        particleCordFile << xVal << " | " << yVal << " | " << zVal << std::endl;
     }
+    particleCordFile.close();
 
     return 0;
 }
