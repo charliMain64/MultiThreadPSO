@@ -1,4 +1,4 @@
 import pandas as pd
 
-df = pd.read_csv("test.txt")
-print(df["particle_num"])
+df = pd.read_csv("../cmake-build-debug/particleCords.txt")
+print(df)

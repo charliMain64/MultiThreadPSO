@@ -17,7 +17,9 @@ int main(int argc, char *argv[]) {
     std::ofstream clearCordFile("particleCords.txt", std::ios::out | std::ios::trunc);
     clearCordFile.close();
     std::ofstream particleCordFile("particleCords.txt");
+    particleCordFile << "particle,iter,x,y,z,vx,vy" << std::endl;
     const int numParticles = 10;
+    const int numIters = 10000;
 
     // int xBounds[2];
     // xBounds[0] = -1;
@@ -54,6 +56,7 @@ int main(int argc, char *argv[]) {
         particleBest(i, 0) = x;
         particleBest(i, 1) = y;
         particleBest(i, 2) = z;
+        particleCordFile << i << "," << 0 << "," << x << "," << y << "," << z << "," << 0 << "," << 0 << std::endl;
     }
     //used to hold the x, y and z of the global best
     Eigen::Matrix <float, 1, 3> globalBest;
@@ -113,7 +116,7 @@ int main(int argc, char *argv[]) {
     float r1 = distTwo(gen);//r1 pulls particle toward personal best
     float r2 = distTwo(gen);//r2 pulls particle toward global best
 
-    for (int i = 0; i < 100000; i++) {
+    for (int i = 0; i < numIters; i++) {
         //Updates particle velocity and position; tracks best positions
         // #pragma omp parallel for
         for (int j = 0; j < numParticles; j++) {
@@ -136,6 +139,7 @@ int main(int argc, char *argv[]) {
                     globalBest(0,i) = particleBest(j,i);
                 }
             }
+            particleCordFile << j << "," << i + 1 << "," << xVal << "," << yVal << "," << zVal << "," << velocity(j,0) << "," << velocity(j,1) << std::endl;
         }
     }
 
@@ -144,7 +148,7 @@ int main(int argc, char *argv[]) {
         yVal = particle(i,1);
         zVal = particle(i,2);
         std::cout << "final: " << xVal << " | " << yVal << " | " << zVal << "\n" << std::endl;
-        particleCordFile << xVal << " | " << yVal << " | " << zVal << std::endl;
+        particleCordFile << i << "," << numIters + 1 << "," << xVal << "," << yVal << "," << zVal << "," << 0 << "," << 0 << std::endl;
     }
     particleCordFile.close();
 
