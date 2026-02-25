@@ -5,10 +5,12 @@
 #include "Eigen/Dense"
 // #include <omp.h>
 
-float contourFunction(float x, float y) {
-    float contour = pow(x - 0.4,2) + pow(y - 0.6, 2) -0.4;
+double contourFunction(double x, double y) {
+    double contour = pow(x - 0.4,2) + pow(y - 0.6, 2) -0.4;
     return contour;
 }
+
+// Can define other contour/objective functions here
 
 int main(int argc, char *argv[]) {
 
@@ -17,9 +19,15 @@ int main(int argc, char *argv[]) {
     std::ofstream clearCordFile("particleCords.txt", std::ios::out | std::ios::trunc);
     clearCordFile.close();
     std::ofstream particleCordFile("particleCords.txt");
-    particleCordFile << "particle,iter,x,y,z,vx,vy" << std::endl;
-    const int numParticles = 10;
-    const int numIters = 10000;
+    bool debugFlag = true;
+
+    if (debugFlag) {
+        particleCordFile << "particle,iter,x,y,z,vx,vy" << std::endl;
+    }
+
+
+    const int numParticles = 100;
+    const int numIters = 100000;
 
     // int xBounds[2];
     // xBounds[0] = -1;
@@ -35,19 +43,19 @@ int main(int argc, char *argv[]) {
 
     //this creates a 2d array of 100 particles and 3 columns per particle each row is used for an x,y,z
     //float particle[numParticles][3];
-    Eigen::Matrix <float, numParticles, 3> particle;
+    Eigen::Matrix <double, numParticles, 3> particle;
     //this is used to find the particle with the best location
     //float particleBest[numParticles][3];
-    Eigen::Matrix <float, numParticles, 3> particleBest;
+    Eigen::Matrix <double, numParticles, 3> particleBest;
 
     //for each particle assign it to a random x and y coordinate
     for (int i = 0; i < numParticles; i++) {
-        float x = dist(gen);
-        float y = dist(gen);
+        double x = dist(gen);
+        double y = dist(gen);
 
         /*z takes the x and y of the randomly placed particle and assigns it to the contour function and
          *returns the z of the particle*/
-        float z = contourFunction(x, y);
+        double z = contourFunction(x, y);
 
         //stores the particles coordinates
         particle(i, 0) = x;
@@ -56,10 +64,12 @@ int main(int argc, char *argv[]) {
         particleBest(i, 0) = x;
         particleBest(i, 1) = y;
         particleBest(i, 2) = z;
-        particleCordFile << i << "," << 0 << "," << x << "," << y << "," << z << "," << 0 << "," << 0 << std::endl;
+        if (debugFlag) {
+            particleCordFile << i << "," << 0 << "," << x << "," << y << "," << z << "," << 0 << "," << 0 << std::endl;
+        }
     }
     //used to hold the x, y and z of the global best
-    Eigen::Matrix <float, 1, 3> globalBest;
+    Eigen::Matrix <double, 1, 3> globalBest;
     //float globalBest[3];
     globalBest(0, 0) = 0.0f;
     globalBest(0, 1) = 0.0f;
@@ -74,9 +84,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    float xVal;
-    float yVal;
-    float zVal;
+    double xVal;
+    double yVal;
+    double zVal;
 
     for (int i = 0; i < numParticles; i++) {
         xVal = particle(i, 0);
@@ -90,14 +100,14 @@ int main(int argc, char *argv[]) {
 
     //initialize velocity to the number of particles and set their start velocity to 0
     //float velocity[numParticles][2];
-    Eigen::Matrix <float, numParticles, 2> velocity;
+    Eigen::Matrix <double, numParticles, 2> velocity;
     for (int i = 0; i < numParticles; i++) {
         velocity(i,0) = 0;
         velocity(i,1) = 0;
     }
 
     //Inertia weight (w) constant, between 0 and 1 and determines how much should the particle keep on with its previous velocity
-    float w = 0.05;
+    double w = 0.05;
 
     /*
      * The parameters 𝑐1 and 𝑐2 are called the cognitive and the social coefficients respectively.
@@ -106,15 +116,15 @@ int main(int argc, char *argv[]) {
      * We can consider these parameters controls the trade off between exploration and exploitation. */
 
     //Individual weight (c1),
-    float c1 = 0.005;
+    double c1 = 0.005;
 
     //Global weight (c2),
-    float c2 = 0.001;
+    double c2 = 0.001;
 
     //𝑟1 and 𝑟2 are random numbers between 0 and 1
     std::uniform_real_distribution<float> distTwo(0.0f, 1.0f);
-    float r1 = distTwo(gen);//r1 pulls particle toward personal best
-    float r2 = distTwo(gen);//r2 pulls particle toward global best
+    double r1 = distTwo(gen);//r1 pulls particle toward personal best
+    double r2 = distTwo(gen);//r2 pulls particle toward global best
 
     for (int i = 0; i < numIters; i++) {
         //Updates particle velocity and position; tracks best positions
@@ -139,7 +149,9 @@ int main(int argc, char *argv[]) {
                     globalBest(0,i) = particleBest(j,i);
                 }
             }
-            particleCordFile << j << "," << i + 1 << "," << xVal << "," << yVal << "," << zVal << "," << velocity(j,0) << "," << velocity(j,1) << std::endl;
+            if (debugFlag) {
+                particleCordFile << j << "," << i + 1 << "," << xVal << "," << yVal << "," << zVal << "," << velocity(j,0) << "," << velocity(j,1) << std::endl;
+            }
         }
     }
 
@@ -148,7 +160,9 @@ int main(int argc, char *argv[]) {
         yVal = particle(i,1);
         zVal = particle(i,2);
         std::cout << "final: " << xVal << " | " << yVal << " | " << zVal << "\n" << std::endl;
-        particleCordFile << i << "," << numIters + 1 << "," << xVal << "," << yVal << "," << zVal << "," << 0 << "," << 0 << std::endl;
+        if (debugFlag) {
+            particleCordFile << i << "," << numIters + 1 << "," << xVal << "," << yVal << "," << zVal << "," << 0 << "," << 0 << std::endl;
+        }
     }
     particleCordFile.close();
 
