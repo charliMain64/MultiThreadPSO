@@ -155,6 +155,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    particleCordFile << "After Calculations:" << std::endl;
     for (int i = 0; i < numParticles; i++) {
         xVal = particle(i,0);
         yVal = particle(i,1);
