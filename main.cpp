@@ -3,7 +3,7 @@
 #include <cmath>
 #include <random>
 #include "Eigen/Dense"
-// #include <omp.h>
+#include <omp.h>
 
 double contourFunction(double x, double y) {
     double contour = pow(x - 0.4,2) + pow(y - 0.6, 2) -0.4;
@@ -25,27 +25,24 @@ int main(int argc, char *argv[]) {
         particleCordFile << "particle,iter,x,y,z,vx,vy" << std::endl;
     }
 
-
-    const int numParticles = 100;
+    const int numParticles = 10;
+    //omp_set_num_threads(numParticles);
     const int numIters = 100000;
 
-    // int xBounds[2];
-    // xBounds[0] = -1;
-    // xBounds[1] = 1;
-    //
-    // int yBounds[2];
-    // yBounds[0] = -1;
-    // yBounds[1] = 1;
+    //check if opm is working (ask Evan if this is what he meant)
+    #ifdef _OPENMP
+        omp_set_num_threads(numParticles);
+    #else
+        omp_set_num_threads(1);
+    #endif
 
     //random generator init (supposedly closer to true random)
     std::mt19937 gen(std::random_device{}());
     std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 
     //this creates a 2d array of 100 particles and 3 columns per particle each row is used for an x,y,z
-    //float particle[numParticles][3];
     Eigen::Matrix <double, numParticles, 3> particle;
     //this is used to find the particle with the best location
-    //float particleBest[numParticles][3];
     Eigen::Matrix <double, numParticles, 3> particleBest;
 
     //for each particle assign it to a random x and y coordinate
@@ -65,7 +62,7 @@ int main(int argc, char *argv[]) {
         particleBest(i, 1) = y;
         particleBest(i, 2) = z;
         if (debugFlag) {
-            particleCordFile << i << "," << 0 << "," << x << "," << y << "," << z << "," << 0 << "," << 0 << std::endl;
+            particleCordFile << i +1 << "," << 0 << "," << x << "," << y << "," << z << "," << 0 << "," << 0 << std::endl;
         }
     }
     //used to hold the x, y and z of the global best
@@ -126,10 +123,13 @@ int main(int argc, char *argv[]) {
     double r1 = distTwo(gen);//r1 pulls particle toward personal best
     double r2 = distTwo(gen);//r2 pulls particle toward global best
 
+
     for (int i = 0; i < numIters; i++) {
         //Updates particle velocity and position; tracks best positions
-        // #pragma omp parallel for
+        #pragma omp parallel for schedule(static) num_threads(numParticles)
         for (int j = 0; j < numParticles; j++) {
+            // #pragma omp critical
+            // std::cout << "particle " << j << " thread " << omp_get_thread_num() << std::endl;
             //iterating through particles
             for (int k = 0; k < 2; k++) {
                 //iterating both x and y for velocity and particle
@@ -144,13 +144,15 @@ int main(int argc, char *argv[]) {
                     particleBest(j,i) = particle(j,i);
                 }
             }
+            #pragma omp critical
             if (z < globalBest(0,2)) {
                 for (int i = 0; i < 3; i++) {
                     globalBest(0,i) = particleBest(j,i);
                 }
             }
+            #pragma omp critical
             if (debugFlag) {
-                particleCordFile << j << "," << i + 1 << "," << xVal << "," << yVal << "," << zVal << "," << velocity(j,0) << "," << velocity(j,1) << std::endl;
+                particleCordFile << j + 1 << "," << i + 1 << "," << particle(j,0) << "," << particle(j,1) << "," << particle(j,2) << "," << velocity(j,0) << "," << velocity(j,1) << std::endl;
             }
         }
     }
@@ -160,13 +162,17 @@ int main(int argc, char *argv[]) {
         xVal = particle(i,0);
         yVal = particle(i,1);
         zVal = particle(i,2);
-        std::cout << "final: " << xVal << " | " << yVal << " | " << zVal << "\n" << std::endl;
+        std::cout << "final: " << particle(i,0) << " | " << particle(i,1) << " | " << particle(i,2) << "\n" << std::endl;
         if (debugFlag) {
             particleCordFile << i << "," << numIters + 1 << "," << xVal << "," << yVal << "," << zVal << "," << 0 << "," << 0 << std::endl;
         }
     }
-    particleCordFile.close();
-
+    //particleCordFile.close();
+    if (particleCordFile.is_open()) {
+        particleCordFile << "Some data\n";
+        particleCordFile.flush(); // Force write to disk
+        particleCordFile.close();// is called automatically
+    }
     return 0;
 }
 
