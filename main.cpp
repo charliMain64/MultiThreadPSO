@@ -4,6 +4,7 @@
 #include <random>
 #include "Eigen/Dense"
 #include <omp.h>
+#include <chrono>
 
 double contourFunction(double x, double y) {
     double contour = pow(x - 0.4,2) + pow(y - 0.6, 2) -0.4;
@@ -13,25 +14,55 @@ double contourFunction(double x, double y) {
 // Can define other contour/objective functions here
 
 int main(int argc, char *argv[]) {
+    bool debugFlag;
+    if (argc >= 3) {
+        debugFlag = atoi(argv[2]);
+    } else {
+        debugFlag = true;
+    }
 
+    std::ofstream particleCordFile;
     //std::cout << contourFunction(4.7, 3.2) << std::endl;
-    std::cout << "Before calculations \n" << std::endl;
-    std::ofstream clearCordFile("particleCords.txt", std::ios::out | std::ios::trunc);
-    clearCordFile.close();
-    std::ofstream particleCordFile("particleCords.txt");
-    bool debugFlag = true;
+    if (debugFlag) {
+        std::cout << "Before calculations \n" << std::endl;
+        std::ofstream clearCordFile("particleCords.txt", std::ios::out | std::ios::trunc);
+        clearCordFile.close();
+        std::ofstream particleCordFile("particleCords.txt");
+    }
 
     if (debugFlag) {
         particleCordFile << "particle,iter,x,y,z,vx,vy" << std::endl;
     }
 
-    const int numParticles = 10;
-    //omp_set_num_threads(numParticles);
-    const int numIters = 100000;
+    int numThreads;
+    if (argc >= 2) {
+        numThreads = atoi(argv[1]);
+    } else {
+        numThreads = 1;
+    }
+
+    std::cout << "numThreads: " << numThreads << std::endl;
+
+    int numParticles;
+    if (argc >= 4) {
+        numParticles = atoi(argv[3]);
+    } else {
+        numParticles = 10;
+    }
+
+    int numIters;
+    if (argc >= 5) {
+        numIters = atoi(argv[4]);
+    } else {
+        numIters = 100000;
+    }
+
+
+
 
     //check if opm is working (ask Evan if this is what he meant)
     #ifdef _OPENMP
-        omp_set_num_threads(numParticles);
+        omp_set_num_threads(numThreads);
     #else
         omp_set_num_threads(1);
     #endif
@@ -41,10 +72,12 @@ int main(int argc, char *argv[]) {
     std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 
     //this creates a 2d array of 100 particles and 3 columns per particle each row is used for an x,y,z
-    Eigen::Matrix <double, numParticles, 3> particle;
+    Eigen::Matrix <double, Eigen::Dynamic, 3> particle(numParticles, 3);
     //this is used to find the particle with the best location
-    Eigen::Matrix <double, numParticles, 3> particleBest;
+    Eigen::Matrix <double, Eigen::Dynamic, 3> particleBest(numParticles, 3);
 
+    // Starting time point
+    auto start = std::chrono::high_resolution_clock::now();
     //for each particle assign it to a random x and y coordinate
     for (int i = 0; i < numParticles; i++) {
         double x = dist(gen);
@@ -89,15 +122,19 @@ int main(int argc, char *argv[]) {
         xVal = particle(i, 0);
         yVal = particle(i, 1);
         zVal = particle(i, 2);
-        std::cout << "start: " << xVal << " | " << yVal << " | " << zVal << "\n" << std::endl;
+        if (debugFlag) {
+            std::cout << "start: " << xVal << " | " << yVal << " | " << zVal << "\n" << std::endl;
+        }
     }
 
     ////////////////Velocity Calculations//////////////////
-    std::cout << "After calculations \n" << std::endl;
+    if (debugFlag) {
+        std::cout << "After calculations \n" << std::endl;
+    }
 
     //initialize velocity to the number of particles and set their start velocity to 0
     //float velocity[numParticles][2];
-    Eigen::Matrix <double, numParticles, 2> velocity;
+    Eigen::Matrix <double, Eigen::Dynamic, 2> velocity(numParticles, 2);
     for (int i = 0; i < numParticles; i++) {
         velocity(i,0) = 0;
         velocity(i,1) = 0;
@@ -126,7 +163,7 @@ int main(int argc, char *argv[]) {
 
     for (int i = 0; i < numIters; i++) {
         //Updates particle velocity and position; tracks best positions
-        #pragma omp parallel for schedule(static) num_threads(numParticles)
+        #pragma omp parallel for
         for (int j = 0; j < numParticles; j++) {
             // #pragma omp critical
             // std::cout << "particle " << j << " thread " << omp_get_thread_num() << std::endl;
@@ -144,13 +181,15 @@ int main(int argc, char *argv[]) {
                     particleBest(j,i) = particle(j,i);
                 }
             }
-            #pragma omp critical
-            if (z < globalBest(0,2)) {
-                for (int i = 0; i < 3; i++) {
-                    globalBest(0,i) = particleBest(j,i);
+            // Is this a good idea?
+            if (i % 100 == 0) {
+                #pragma omp critical
+                if (z < globalBest(0,2)) {
+                    for (int i = 0; i < 3; i++) {
+                        globalBest(0,i) = particleBest(j,i);
+                    }
                 }
             }
-            #pragma omp critical
             if (debugFlag) {
                 particleCordFile << j + 1 << "," << i + 1 << "," << particle(j,0) << "," << particle(j,1) << "," << particle(j,2) << "," << velocity(j,0) << "," << velocity(j,1) << std::endl;
             }
@@ -162,16 +201,23 @@ int main(int argc, char *argv[]) {
         xVal = particle(i,0);
         yVal = particle(i,1);
         zVal = particle(i,2);
-        std::cout << "final: " << particle(i,0) << " | " << particle(i,1) << " | " << particle(i,2) << "\n" << std::endl;
+        if (debugFlag) {
+            std::cout << "final: " << particle(i,0) << " | " << particle(i,1) << " | " << particle(i,2) << "\n" << std::endl;
+        }
         // if (debugFlag) {
         //     particleCordFile << i << "," << numIters + 1 << "," << xVal << "," << yVal << "," << zVal << "," << 0 << "," << 0 << std::endl;
         // }
     }
-    particleCordFile.close();
+    if (debugFlag) {
+        particleCordFile.close();
+    }
     // if (particleCordFile.is_open()) {
     //     particleCordFile.flush(); // Force write to disk
     //     particleCordFile.close();// is called automatically
     // }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> duration = end - start;
+    std::cout << "Run time: " << duration << std::endl;
     return 0;
 }
 
