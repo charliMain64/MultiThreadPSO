@@ -61,9 +61,9 @@ int main(int argc, char *argv[]) {
         particleBest(i, 0) = x;
         particleBest(i, 1) = y;
         particleBest(i, 2) = z;
-        if (debugFlag) {
-            particleCordFile << i +1 << "," << 0 << "," << x << "," << y << "," << z << "," << 0 << "," << 0 << std::endl;
-        }
+        // if (debugFlag) {
+        //     particleCordFile << i +1 << "," << 0 << "," << x << "," << y << "," << z << "," << 0 << "," << 0 << std::endl;
+        // }
     }
     //used to hold the x, y and z of the global best
     Eigen::Matrix <double, 1, 3> globalBest;
@@ -157,22 +157,21 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    particleCordFile << "After Calculations:" << std::endl;
+    //particleCordFile << "After Calculations:" << std::endl;
     for (int i = 0; i < numParticles; i++) {
         xVal = particle(i,0);
         yVal = particle(i,1);
         zVal = particle(i,2);
         std::cout << "final: " << particle(i,0) << " | " << particle(i,1) << " | " << particle(i,2) << "\n" << std::endl;
-        if (debugFlag) {
-            particleCordFile << i << "," << numIters + 1 << "," << xVal << "," << yVal << "," << zVal << "," << 0 << "," << 0 << std::endl;
-        }
+        // if (debugFlag) {
+        //     particleCordFile << i << "," << numIters + 1 << "," << xVal << "," << yVal << "," << zVal << "," << 0 << "," << 0 << std::endl;
+        // }
     }
-    //particleCordFile.close();
-    if (particleCordFile.is_open()) {
-        particleCordFile << "Some data\n";
-        particleCordFile.flush(); // Force write to disk
-        particleCordFile.close();// is called automatically
-    }
+    particleCordFile.close();
+    // if (particleCordFile.is_open()) {
+    //     particleCordFile.flush(); // Force write to disk
+    //     particleCordFile.close();// is called automatically
+    // }
     return 0;
 }
 
