@@ -5,6 +5,7 @@
 #include "Eigen/Dense"
 #include <omp.h>
 #include <chrono>
+#include <string>
 
 double contourFunction(double x, double y) {
     double contour = pow(x - 0.4,2) + pow(y - 0.6, 2) -0.4;
@@ -12,60 +13,73 @@ double contourFunction(double x, double y) {
 }
 
 // Can define other contour/objective functions here
-
 int main(int argc, char *argv[]) {
-    bool debugFlag;
-    if (argc >= 3) {
-        debugFlag = atoi(argv[2]);
-    } else {
-        debugFlag = true;
-    }
+    //*****if running in terminal this is the correct format for each argument  (threads/particles/iterations/write(y for write))
+    std::cout << " " << std::endl;
 
-    std::ofstream particleCordFile;
+    bool debugFlag = false;
+    bool writeFileFlag;
+
+
+    // if (argc >= 1) {
+    //     debugFlag = atoi(argv[3]);
+    // } else {
+    //     debugFlag = true;
+    // }
+
+    // std::ofstream particleCordFile;
     //std::cout << contourFunction(4.7, 3.2) << std::endl;
-    if (debugFlag) {
-        std::cout << "Before calculations \n" << std::endl;
-        std::ofstream clearCordFile("particleCords.txt", std::ios::out | std::ios::trunc);
-        clearCordFile.close();
-        std::ofstream particleCordFile("particleCords.txt");
-    }
 
-    if (debugFlag) {
-        particleCordFile << "particle,iter,x,y,z,vx,vy" << std::endl;
-    }
+    // if (writeFileFlag) {
+    //     particleCordFile << "particle,iter,x,y,z,vx,vy" << std::endl;
+    // }
 
+    //num threads inputted
     int numThreads;
     if (argc >= 2) {
         numThreads = atoi(argv[1]);
     } else {
         numThreads = 1;
     }
+    omp_set_num_threads(numThreads);
 
-    std::cout << "numThreads: " << numThreads << std::endl;
 
+    //num particles to use
     int numParticles;
-    if (argc >= 4) {
-        numParticles = atoi(argv[3]);
+    if (argc >= 3) {
+        numParticles = atoi(argv[2]);
     } else {
         numParticles = 10;
     }
 
+    //number of iterations
     int numIters;
-    if (argc >= 5) {
-        numIters = atoi(argv[4]);
+    if (argc >= 4) {
+        numIters = atoi(argv[3]);
     } else {
         numIters = 100000;
     }
 
+    if (argc >= 5) {
+        std::string write = argv[4];
+        if (write == "y") {
+            writeFileFlag = true;
+        }else {
+            writeFileFlag = false;
+        }
+    }else {
+        writeFileFlag = false;
+    }
+    std::cout << "numThreads: " << numThreads << std::endl;
 
-
-
-    //check if opm is working (ask Evan if this is what he meant)
-    #ifdef _OPENMP
-        omp_set_num_threads(numThreads);
-    #else
-        omp_set_num_threads(1);
-    #endif
+    std::ofstream particleCordFile("particleCords.txt");
+    if (writeFileFlag) {
+        //std::cout << "Before calculations \n" << std::endl;
+        std::ofstream clearCordFile("particleCords.txt", std::ios::out | std::ios::trunc);
+        clearCordFile.close();
+        //std::ofstream particleCordFile("particleCords.txt");
+        particleCordFile << "particle,iter,x,y,z,vx,vy" << std::endl;
+    }
 
     //random generator init (supposedly closer to true random)
     std::mt19937 gen(std::random_device{}());
@@ -94,9 +108,9 @@ int main(int argc, char *argv[]) {
         particleBest(i, 0) = x;
         particleBest(i, 1) = y;
         particleBest(i, 2) = z;
-        // if (debugFlag) {
-        //     particleCordFile << i +1 << "," << 0 << "," << x << "," << y << "," << z << "," << 0 << "," << 0 << std::endl;
-        // }
+         if (writeFileFlag) {
+             particleCordFile << i +1 << "," << 0 << "," << x << "," << y << "," << z << "," << 0 << "," << 0 << std::endl;
+         }
     }
     //used to hold the x, y and z of the global best
     Eigen::Matrix <double, 1, 3> globalBest;
@@ -122,7 +136,7 @@ int main(int argc, char *argv[]) {
         xVal = particle(i, 0);
         yVal = particle(i, 1);
         zVal = particle(i, 2);
-        if (debugFlag) {
+        if (writeFileFlag) {
             std::cout << "start: " << xVal << " | " << yVal << " | " << zVal << "\n" << std::endl;
         }
     }
@@ -181,8 +195,7 @@ int main(int argc, char *argv[]) {
                     particleBest(j,i) = particle(j,i);
                 }
             }
-            // Is this a good idea?
-            if (i % 100 == 0) {
+            if (i % 30 == 0) {
                 #pragma omp critical
                 if (z < globalBest(0,2)) {
                     for (int i = 0; i < 3; i++) {
@@ -190,8 +203,13 @@ int main(int argc, char *argv[]) {
                     }
                 }
             }
-            if (debugFlag) {
+            if (writeFileFlag) {
+                #pragma omp critical
                 particleCordFile << j + 1 << "," << i + 1 << "," << particle(j,0) << "," << particle(j,1) << "," << particle(j,2) << "," << velocity(j,0) << "," << velocity(j,1) << std::endl;
+                //#pragma omp critical
+                // if (writeFileFlag) {
+                    // particleCordFile << j + 1 << "," << i + 1 << "," << particle(j,0) << "," << particle(j,1) << "," << particle(j,2) << "," << velocity(j,0) << "," << velocity(j,1) << std::endl;
+                // }
             }
         }
     }
@@ -201,20 +219,17 @@ int main(int argc, char *argv[]) {
         xVal = particle(i,0);
         yVal = particle(i,1);
         zVal = particle(i,2);
-        if (debugFlag) {
-            std::cout << "final: " << particle(i,0) << " | " << particle(i,1) << " | " << particle(i,2) << "\n" << std::endl;
+        if (writeFileFlag) {
+             std::cout << "final: " << particle(i,0) << " | " << particle(i,1) << " | " << particle(i,2) << "\n" << std::endl;
         }
-        // if (debugFlag) {
-        //     particleCordFile << i << "," << numIters + 1 << "," << xVal << "," << yVal << "," << zVal << "," << 0 << "," << 0 << std::endl;
-        // }
+        if (writeFileFlag) {
+            particleCordFile << i << "," << numIters + 1 << "," << xVal << "," << yVal << "," << zVal << "," << 0 << "," << 0 << std::endl;
+        }
     }
-    if (debugFlag) {
+    if (writeFileFlag) {
         particleCordFile.close();
     }
-    // if (particleCordFile.is_open()) {
-    //     particleCordFile.flush(); // Force write to disk
-    //     particleCordFile.close();// is called automatically
-    // }
+
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> duration = end - start;
     std::cout << "Run time: " << duration << std::endl;

@@ -54,6 +54,6 @@ ax.contourf(X, Y, Z, levels=50, cmap='plasma', alpha=0.5)
 
 scatter = ax.scatter([], [], color='darkorange', s=40)
 globalbest = ax.scatter([], [], color='gold', marker='*', s=140)
-animation = FuncAnimation(fig, video, frames=len(iterations), interval=0.001, blit=True)
+animation = FuncAnimation(fig, video, frames=len(iterations), interval=5, blit=True)
 
 plt.show()
