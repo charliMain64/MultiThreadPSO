@@ -15,9 +15,9 @@ double contourFunction(double x, double y) {
 // Can define other contour/objective functions here
 int main(int argc, char *argv[]) {
     //*****if running in terminal this is the correct format for each argument  (threads/particles/iterations/write(y for write))
-    std::cout << " " << std::endl;
 
     bool debugFlag = false;
+    int iterationHop;
     bool writeFileFlag;
 
 
@@ -43,6 +43,15 @@ int main(int argc, char *argv[]) {
     }
     omp_set_num_threads(numThreads);
 
+    if (numThreads <= 10) {
+        iterationHop = 20;
+    }else if (numThreads >= 11 && numThreads <= 20) {
+        iterationHop = 40;
+    }else if (numThreads >= 21 && numThreads <= 30) {
+        iterationHop = 80;
+    }else {
+        iterationHop = 100;
+    }
 
     //num particles to use
     int numParticles;
@@ -70,7 +79,7 @@ int main(int argc, char *argv[]) {
     }else {
         writeFileFlag = false;
     }
-    std::cout << "numThreads: " << numThreads << std::endl;
+    // std::cout << "numThreads: " << numThreads << std::endl;
 
     std::ofstream particleCordFile("particleCords.txt");
     if (writeFileFlag) {
@@ -142,9 +151,6 @@ int main(int argc, char *argv[]) {
     }
 
     ////////////////Velocity Calculations//////////////////
-    if (debugFlag) {
-        std::cout << "After calculations \n" << std::endl;
-    }
 
     //initialize velocity to the number of particles and set their start velocity to 0
     //float velocity[numParticles][2];
@@ -195,7 +201,9 @@ int main(int argc, char *argv[]) {
                     particleBest(j,i) = particle(j,i);
                 }
             }
-            if (i % 30 == 0) {
+
+
+            if (i % iterationHop == 0) {
                 #pragma omp critical
                 if (z < globalBest(0,2)) {
                     for (int i = 0; i < 3; i++) {
