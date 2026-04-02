@@ -4,7 +4,7 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 import pandas as pd
 
-df = pd.read_csv("../particleCords.txt")
+df = pd.read_csv("../cmake-build-debug/particleCords.txt")
 df.columns = df.columns.str.strip()
 
 plt.style.use('seaborn-v0_8')
@@ -15,14 +15,26 @@ ax.set_ylim(-1, 1)
 groups = df.groupby("iter")
 iterations = sorted(groups.groups.keys())
 
+def contourFunctionRastrigin(x, y):
+    return 20 + x**2 + y**2 - 10 * (np.cos(2 * np.pi * x) + np.cos(2 * np.pi * y))
+
 def contourFunction(x, y):
     return (x - 0.4)**2 + (y - 0.6)**2 - 0.4
+
+#change for contour function
+chooseContourFunction = 1
 
 xLayout = np.linspace(-1, 1, 200)
 yLayout = np.linspace(-1, 1, 200)
 X, Y = np.meshgrid(xLayout, yLayout)
 
-Z = contourFunction(X, Y)
+if chooseContourFunction == 1:
+    Z = contourFunction(X, Y)
+elif chooseContourFunction == 2:
+    Z = contourFunctionRastrigin(X, Y)
+else:
+    Z = contourFunction(X, Y)
+
 contourFuncmap = cm.plasma
 contourDraw = ax.contourf(X, Y, Z, levels=50, cmap=contourFuncmap, alpha=0.5)
 
@@ -49,7 +61,14 @@ def video(frame):
     globalbest.set_offsets([[xBest, yBest]])
     return scatter, globalbest
 
-Z = contourFunction(X, Y)
+
+if chooseContourFunction == 1:
+    Z = contourFunction(X, Y)
+elif chooseContourFunction == 2:
+    Z = contourFunctionRastrigin(X, Y)
+else:
+    Z = contourFunction(X, Y)
+
 ax.contourf(X, Y, Z, levels=50, cmap='plasma', alpha=0.5)
 
 scatter = ax.scatter([], [], color='darkorange', s=40)
@@ -57,3 +76,6 @@ globalbest = ax.scatter([], [], color='gold', marker='*', s=140)
 animation = FuncAnimation(fig, video, frames=len(iterations), interval=5, blit=True)
 
 plt.show()
+#animation.save('sixteenThreadTenParts.mp4', writer='ffmpeg', fps=24, dpi=100)
+
+
