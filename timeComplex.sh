@@ -1,4 +1,5 @@
 #!/bin/bash
+#move me to cmake-build-debug file so I can work properly :)
 arr=()
 echo "Running 10 iterations of pso program each, with 10 particles at 100000 iterations"
 for i in {1..10}; do
