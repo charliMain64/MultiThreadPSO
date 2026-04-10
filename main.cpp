@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
     if (argc >= 2) {
         numThreads = atoi(argv[1]);
     } else {
-        numThreads = 1;
+        numThreads = 10;
     }
     omp_set_num_threads(numThreads);
 
@@ -179,9 +179,11 @@ int main(int argc, char *argv[]) {
 
     //Individual weight (c1),
     double c1 = 0.005;
+    double c1Explore = 0.5;//used to give to 2 threads to explore more
 
-    //Global weight (c2),
+    //Global weight (c2), //follow the swarm
     double c2 = 0.001;
+    double c2Explore = 0.00001;//used to give to 2 threads to explore more
 
     //𝑟1 and 𝑟2 are random numbers between 0 and 1
     std::uniform_real_distribution<float> distTwo(0.0f, 1.0f);
@@ -191,46 +193,90 @@ int main(int argc, char *argv[]) {
 
     for (int i = 0; i < numIters; i++) {
         //Updates particle velocity and position; tracks best positions
-        #pragma omp parallel for
+        #pragma omp parallel num_threads(numThreads)
         for (int j = 0; j < numParticles; j++) {
+            int threadIDs = omp_get_thread_num();
             // #pragma omp critical
             // std::cout << "particle " << j << " thread " << omp_get_thread_num() << std::endl;//use to debug
             //iterating through particles
-            for (int k = 0; k < 2; k++) {
-                //iterating both x and y for velocity and particle
-                velocity(j,k) = w * velocity(j,k) + c1 * r1 * (particleBest(j,k) - particle(j,k)) + c2 * r2 * (globalBest(0,k) - particle(j,k));
-                particle(j,k) += velocity(j,k);
-            }
 
-            double z;
-            if (chooseContourFunction == 1) {
-                 z = contourFunction(particle(j,0), particle(j,1)); //get z of the particle at that x and y
-            }else if (chooseContourFunction == 2) {
-                 z = contourFunctionRastrigin(particle(j,0), particle(j,1)); //get z of the particle at that x and y
-            }else {
-                z = contourFunction(particle(j,0), particle(j,1)); //get z of the particle at that x and y
-            }
-
-            particle(j,2) = z; //set z to the particle
-
-            if (z < particleBest(j,2)) {
-                for (int i = 0; i < 3; i++) {
-                    particleBest(j,i) = particle(j,i);
+            #pragma omp critical
+            if (threadIDs > 2) {//fix leter all the threads are rounting to the else cause
+                // std::cout << "threadIDs: " << threadIDs << std::endl;
+                for (int k = 0; k < 2; k++) {
+                    //iterating both x and y for velocity and particle
+                    velocity(j,k) = w * velocity(j,k) + c1 * r1 * (particleBest(j,k) - particle(j,k)) + c2 * r2 * (globalBest(0,k) - particle(j,k));
+                    particle(j,k) += velocity(j,k);
                 }
-            }
 
+                double z;
+                if (chooseContourFunction == 1) {
+                    z = contourFunction(particle(j,0), particle(j,1)); //get z of the particle at that x and y
+                }else if (chooseContourFunction == 2) {
+                    z = contourFunctionRastrigin(particle(j,0), particle(j,1)); //get z of the particle at that x and y
+                }else {
+                    z = contourFunction(particle(j,0), particle(j,1)); //get z of the particle at that x and y
+                }
 
-            if (i % iterationHop == 0) {
-                #pragma omp critical
-                if (z < globalBest(0,2)) {
+                particle(j,2) = z; //set z to the particle
+
+                if (z < particleBest(j,2)) {
                     for (int i = 0; i < 3; i++) {
-                        globalBest(0,i) = particleBest(j,i);
+                        particleBest(j,i) = particle(j,i);
                     }
                 }
-            }
-            if (writeFileFlag) {
-                #pragma omp critical
-                particleCordFile << j + 1 << "," << i + 1 << "," << particle(j,0) << "," << particle(j,1) << "," << particle(j,2) << "," << velocity(j,0) << "," << velocity(j,1) << std::endl;
+
+
+                if (i % iterationHop == 0) {
+                    // #pragma omp critical
+                    if (z < globalBest(0,2)) {
+                        for (int i = 0; i < 3; i++) {
+                            globalBest(0,i) = particleBest(j,i);
+                        }
+                    }
+                }
+                if (writeFileFlag) {
+                    // #pragma omp critical
+                    particleCordFile << j + 1 << "," << i + 1 << "," << particle(j,0) << "," << particle(j,1) << "," << particle(j,2) << "," << velocity(j,0) << "," << velocity(j,1) << std::endl;
+                }
+            }else {
+                std::cout << "threadIDs: " << threadIDs << std::endl;
+                for (int k = 0; k < 2; k++) {
+                    //iterating both x and y for velocity and particle
+                    velocity(j,k) = w * velocity(j,k) + c1Explore * r1 * (particleBest(j,k) - particle(j,k)) + c2Explore * r2 * (globalBest(0,k) - particle(j,k));
+                    particle(j,k) += velocity(j,k);
+                }
+
+                double z;
+                if (chooseContourFunction == 1) {
+                    z = contourFunction(particle(j,0), particle(j,1)); //get z of the particle at that x and y
+                }else if (chooseContourFunction == 2) {
+                    z = contourFunctionRastrigin(particle(j,0), particle(j,1)); //get z of the particle at that x and y
+                }else {
+                    z = contourFunction(particle(j,0), particle(j,1)); //get z of the particle at that x and y
+                }
+
+                particle(j,2) = z; //set z to the particle
+
+                if (z < particleBest(j,2)) {
+                    for (int i = 0; i < 3; i++) {
+                        particleBest(j,i) = particle(j,i);
+                    }
+                }
+
+
+                if (i % iterationHop == 0) {
+                    // #pragma omp critical
+                    if (z < globalBest(0,2)) {
+                        for (int i = 0; i < 3; i++) {
+                            globalBest(0,i) = particleBest(j,i);
+                        }
+                    }
+                }
+                if (writeFileFlag) {
+                    // #pragma omp critical
+                    particleCordFile << j + 1 << "," << i + 1 << "," << particle(j,0) << "," << particle(j,1) << "," << particle(j,2) << "," << velocity(j,0) << "," << velocity(j,1) << std::endl;
+                }
             }
         }
     }
